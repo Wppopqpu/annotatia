@@ -42,7 +42,7 @@ RUBY_MACRO = (
 )
 
 
-def generate_template(content, engine):
+def generate_template(content, engine, center=False, linespread=None):
     nl = '\n'
     if engine == 'xelatex':
         preamble = (
@@ -51,16 +51,20 @@ def generate_template(content, engine):
             + r'\usepackage{xeCJK}' + nl
             + r'\setCJKmainfont{Noto Sans CJK JP}' + nl
             + RUBY_MACRO + nl
-            + r'\begin{document}' + nl
         )
+        if linespread is not None:
+            preamble += r'\linespread{%s}' % linespread + nl + r'\selectfont' + nl
+        preamble += r'\begin{document}' + nl
         postamble = nl + r'\end{document}' + nl
     elif engine == 'lualatex':
         preamble = (
             r'\documentclass{article}' + nl
             + r'\usepackage{luatexja}' + nl
             + r'\usepackage{luatexja-ruby}' + nl
-            + r'\begin{document}' + nl
         )
+        if linespread is not None:
+            preamble += r'\linespread{%s}' % linespread + nl + r'\selectfont' + nl
+        preamble += r'\begin{document}' + nl
         postamble = nl + r'\end{document}' + nl
     else:
         preamble = (
@@ -68,12 +72,18 @@ def generate_template(content, engine):
             + r'\usepackage{CJK}' + nl
             + r'\usepackage{ruby}' + nl
             + r'\begin{CJK}{UTF8}{min}' + nl
-            + r'\begin{document}' + nl
         )
+        if linespread is not None:
+            preamble += r'\linespread{%s}' % linespread + nl + r'\selectfont' + nl
+        preamble += r'\begin{document}' + nl
         postamble = (
             nl + r'\end{document}' + nl
             + r'\end{CJK}' + nl
         )
+
+    if center:
+        content = r'\begin{center}' + nl + content + nl + r'\end{center}'
+
     return preamble + content + postamble
 
 
@@ -88,6 +98,10 @@ def main():
                         help='Target LaTeX engine (default: xelatex)')
     parser.add_argument('--template', action='store_true',
                         help='Output complete LaTeX document with preamble')
+    parser.add_argument('--center', action='store_true',
+                        help='Center-align text in the document')
+    parser.add_argument('--linespread', type=float,
+                        help='Line spacing multiplier (e.g. 1.5 for one-and-a-half spacing)')
 
     args = parser.parse_args()
 
@@ -100,7 +114,9 @@ def main():
     converted = convert_to_ruby(text)
 
     if args.template:
-        output = generate_template(converted, args.engine)
+        output = generate_template(converted, args.engine,
+                                   center=args.center,
+                                   linespread=args.linespread)
     else:
         output = converted
 
