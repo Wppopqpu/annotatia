@@ -72,7 +72,7 @@ RUBY_MACRO = (
 )
 
 
-def generate_template(content, engine, center=False, linespread=None):
+def generate_template(content, engine, center=False, linespread=None, twocolumn=False):
     nl = '\n'
     if engine == 'xelatex':
         preamble = (
@@ -84,8 +84,15 @@ def generate_template(content, engine, center=False, linespread=None):
         )
         if linespread is not None:
             preamble += r'\linespread{%s}' % linespread + nl + r'\selectfont' + nl
+        if twocolumn:
+            preamble += r'\usepackage{multicol}' + nl
         preamble += r'\begin{document}' + nl
-        postamble = nl + r'\end{document}' + nl
+        if twocolumn:
+            preamble += r'\begin{multicols}{2}' + nl
+        postamble = nl
+        if twocolumn:
+            postamble += r'\end{multicols}' + nl
+        postamble += r'\end{document}' + nl
     elif engine == 'lualatex':
         preamble = (
             r'\documentclass{article}' + nl
@@ -94,8 +101,15 @@ def generate_template(content, engine, center=False, linespread=None):
         )
         if linespread is not None:
             preamble += r'\linespread{%s}' % linespread + nl + r'\selectfont' + nl
+        if twocolumn:
+            preamble += r'\usepackage{multicol}' + nl
         preamble += r'\begin{document}' + nl
-        postamble = nl + r'\end{document}' + nl
+        if twocolumn:
+            preamble += r'\begin{multicols}{2}' + nl
+        postamble = nl
+        if twocolumn:
+            postamble += r'\end{multicols}' + nl
+        postamble += r'\end{document}' + nl
     else:
         preamble = (
             r'\documentclass{article}' + nl
@@ -105,11 +119,15 @@ def generate_template(content, engine, center=False, linespread=None):
         )
         if linespread is not None:
             preamble += r'\linespread{%s}' % linespread + nl + r'\selectfont' + nl
+        if twocolumn:
+            preamble += r'\usepackage{multicol}' + nl
         preamble += r'\begin{document}' + nl
-        postamble = (
-            nl + r'\end{document}' + nl
-            + r'\end{CJK}' + nl
-        )
+        if twocolumn:
+            preamble += r'\begin{multicols}{2}' + nl
+        postamble = nl
+        if twocolumn:
+            postamble += r'\end{multicols}' + nl
+        postamble += r'\end{document}' + nl + r'\end{CJK}' + nl
 
     if center:
         content = r'\begin{center}' + nl + content + nl + r'\end{center}'
@@ -136,6 +154,9 @@ def main():
     parser.add_argument('--hr',
                         action=argparse.BooleanOptionalAction,
                         help='Insert horizontal rules between text lines (use --no-hr to disable)')
+    parser.add_argument('--twocolumn',
+                        action=argparse.BooleanOptionalAction,
+                        help='Two-column layout (use --no-twocolumn to disable)')
     parser.add_argument('--lrc', action='store_true',
                         help='LRC lyrics mode (auto-sets --center --linespread 1.5 --hr, '
                              'strips timestamps; use --no-center/--no-hr to override)')
@@ -166,7 +187,8 @@ def main():
         )
         output = generate_template(converted, args.engine,
                                    center=center,
-                                   linespread=linespread)
+                                   linespread=linespread,
+                                   twocolumn=args.twocolumn)
     else:
         output = converted
 
