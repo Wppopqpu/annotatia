@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "annotatia"
+version = "1.0.0"
+description = "Convert Japanese text to LaTeX with furigana (\ruby) annotation"
+requires-python = ">=3.9"
+dependencies = ["pykakasi"]
+
+[project.scripts]
+annotatia = "annotatia:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+py-modules = ["annotatia"]
