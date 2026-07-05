@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+import re
 import sys
 
 import pykakasi
@@ -25,11 +26,40 @@ def _process_line(line, kks):
     return ''.join(parts)
 
 
+PARA = '\n\n'
+
+
 def convert_to_ruby(text):
     kks = pykakasi.kakasi()
     lines = text.split('\n')
     processed = [_process_line(l, kks) for l in lines]
-    return '\n'.join(processed)
+    return PARA.join(processed)
+
+
+LRC_TIMESTAMP_RE = re.compile(r'\[\d{2}:\d{2}\.\d{2,3}\]')
+
+
+def parse_lrc(text):
+    lines = text.split('\n')
+    result = []
+    for line in lines:
+        cleaned = LRC_TIMESTAMP_RE.sub('', line).strip()
+        result.append(cleaned)
+    return '\n'.join(result)
+
+
+def add_hr_separator(text):
+    lines = text.split(PARA)
+    non_empty = [i for i, l in enumerate(lines) if l.strip()]
+    result = []
+    for i, line in enumerate(lines):
+        if line.strip():
+            if result and result[-1].strip():
+                result.append(r'\vspace{0.3ex}\rule{0.6\linewidth}{0.4pt}\vspace{0.3ex}')
+            result.append(line)
+        else:
+            result.append('')
+    return PARA.join(result)
 
 
 RUBY_MACRO = (
@@ -98,10 +128,17 @@ def main():
                         help='Target LaTeX engine (default: xelatex)')
     parser.add_argument('--template', action='store_true',
                         help='Output complete LaTeX document with preamble')
-    parser.add_argument('--center', action='store_true',
-                        help='Center-align text in the document')
+    parser.add_argument('--center',
+                        action=argparse.BooleanOptionalAction,
+                        help='Center-align text in the document (use --no-center to disable)')
     parser.add_argument('--linespread', type=float,
                         help='Line spacing multiplier (e.g. 1.5 for one-and-a-half spacing)')
+    parser.add_argument('--hr',
+                        action=argparse.BooleanOptionalAction,
+                        help='Insert horizontal rules between text lines (use --no-hr to disable)')
+    parser.add_argument('--lrc', action='store_true',
+                        help='LRC lyrics mode (auto-sets --center --linespread 1.5 --hr, '
+                             'strips timestamps; use --no-center/--no-hr to override)')
 
     args = parser.parse_args()
 
@@ -111,12 +148,25 @@ def main():
     else:
         text = sys.stdin.read()
 
+    is_lrc = args.lrc or (args.input and args.input.endswith('.lrc'))
+    if is_lrc:
+        text = parse_lrc(text)
+
     converted = convert_to_ruby(text)
 
+    hr = args.hr if args.hr is not None else is_lrc
+
+    if hr:
+        converted = add_hr_separator(converted)
+
     if args.template:
+        center = args.center if args.center is not None else is_lrc
+        linespread = args.linespread if args.linespread is not None else (
+            1.5 if is_lrc else None
+        )
         output = generate_template(converted, args.engine,
-                                   center=args.center,
-                                   linespread=args.linespread)
+                                   center=center,
+                                   linespread=linespread)
     else:
         output = converted
 
